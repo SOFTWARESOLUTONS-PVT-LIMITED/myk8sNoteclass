@@ -1,0 +1,130 @@
+Kubernetes Node Upgradation 
+===========================
+ip-192-168-11-124.ap-south-1.compute.internal
+ip-192-168-62-117.ap-south-1.compute.internal
+
+=========================================
+ip-192-168-27-58.ap-south-1.compute.internal
+ip-192-168-59-89.ap-south-1.compute.internal
+
+eksctl create nodegroup --cluster=eks-demo1 \
+                   --region=ap-south-1 \
+                   --name=eksnode3NewNode \
+                   --node-type=t2.medium \
+                   --nodes=2 \
+                   --nodes-min=2 \
+                   --nodes-max=4 \
+                   --node-volume-size=10 \
+                   --ssh-access \
+                   --ssh-public-key=devops21 \
+                   --managed \
+                   --asg-access \
+                   --external-dns-access \
+                   --full-ecr-access \
+                   --appmesh-access \
+                   --alb-ingress-access	
+				   
+				   
+				   
+eksctl delete nodegroup --cluster=eks-demo1 --region=ap-south-1 --name=eksnode2
+
+eksctl delete cluster --name=eks-demo1 --region=ap-south-1
+
+
+https://github.com/chinnareddaiah/kubernetes-2/tree/main/cluster-upgradation/kubernetes-updating-nodegroup
+
+deployment.yml
+--------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+		
+		
+nodejs-deployment.yml
+--------------------
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodejs-deployment
+  labels:
+    app: nodejs
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: nodejs
+  template:
+    metadata:
+      labels:
+        app: nodejs
+    spec:
+      containers:
+      - name: nodejs-deployment
+        image: chinnareddaiah/nodejs-k8s:v1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+		
+Step:1
+Need to create cluster with one node group. Here I created nodegroup with the name of "eksnode2".
+
+eksctl get nodegroup --cluster=eks-demo1 --region ap-south-1
+
+Step:2
+Deploy application using below command
+
+kubectl apply -f deployment.yml
+
+Step:3
+Need to create new node group using below command
+
+Step:4
+Need to "Cordon" nodes of Old nodegroup, so that new deployment will not be happen on Old nodegroup
+
+Step:5
+Deploy nodejs application using below command
+
+kubectl apply -f nodejs-deployment.yml
+
+Step:6
+Draining nodes of old nodegroup
+
+kubectl drain ip-192-168-11-124.ap-south-1.compute.internal --ignore-daemonsets --delete-local-data
+kubectl drain ip-192-168-62-117.ap-south-1.compute.internal --ignore-daemonsets --delete-local-data
+
+Step:7
+Check pods, where they are running
+
+kubectl get pods -o wide
+
+Step:8
+Delete old nodegroup using below command and check after 2min whether nodegroup exists or not
+
+eksctl delete nodegroup --cluster=eks-demo1 --region=ap-south-1 --name=eksnode2
+
+
+aws eks --region us-east-1 update-kubeconfig --name eksdemo
