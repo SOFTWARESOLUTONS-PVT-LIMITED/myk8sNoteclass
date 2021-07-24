@@ -1,0 +1,269 @@
+Node Exporter is a Prometheus exporter for server level and OS level metrics with configurable metric collectors. It helps us in measuring various server resources such as RAM, disk space, and CPU utilization.
+
+https://prometheus.io/docs/guides/node-exporter/
+
+Run Node Exporter As Service:
+Download The Binary File
+
+Port=9100
+
+cd /opt
+wget https://github.com/prometheus/node_exporter/releases/download/v0.18.1/node_exporter-0.18.1.linux-amd64.tar.gz
+wget https://github.com/prometheus/node_exporter/releases/download/v*/node_exporter-*.*-amd64.tar.gz
+tar xvfz node_exporter-*.*-amd64.tar.gz
+cd node_exporter-*.*-amd64
+./node_exporter
+
+http://3.109.58.192:9100/metrics
+
+Create a file in "/etc/systemd/system/node-exporter.service" path:
+
+vi /etc/systemd/system/node-exporter.service
+-----------------------------------------------------------------
+[Unit]
+Description=Node exporter
+After=network-online.target
+
+[Service]
+User=root
+Restart=on-failure
+
+#Change this line if you download the node_exporter on different path user
+ExecStart=/opt/node_exporter/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+
+Reload the systemctl daemon:
+systemctl daemon-reload
+
+Start the node-exporter service:
+service node-exporter start
+
+Check status of node-exporter:
+service node-exporter status
+
+Stop the node-exporter service:
+service node-exporter stop
+
+
+====================================
+
+Run Prometheus As A Service
+
+Port =9090
+
+Prometheus is a metrics collection and alerting tool developed and released to open source by SoundCloud in 2012. The main Prometheus app itself that is responsible for scraping metrics, storing them in the database, and (optionally) retrieving them when queried. The database backend is an internal Time Series database
+
+Download Prometheus using below link
+wget https://github.com/prometheus/prometheus/releases/download/v2.23.0/prometheus-2.23.0.linux-amd64.tar.gz
+
+Extract tar file
+tar xvzf prometheus-2.23.0.linux-amd64.tar.gz
+
+Rename file name
+mv prometheus-2.23.0.linux-amd64/ prometheus-2.23.0
+
+Create a file prometheus.service:
+vi /etc/systemd/system/prometheus.service
+---------------------------------------------------------------------
+[Unit]
+Description=Prometheus
+Documentation=https://prometheus.io/docs/introduction/overview/
+After=network-online.target
+	
+[Service]
+User=root
+Restart=on-failure
+	
+#Change this line if you download the
+#Prometheus on different path user
+ExecStart=/opt/prometheus/prometheus \
+--config.file=/opt/prometheus/prometheus.yml \
+--storage.tsdb.path=/opt/prometheus/data \
+--web.console.templates=/opt/prometheus/consoles \
+--web.console.libraries=/opt/prometheus/console_libraries
+
+[Install]
+WantedBy=multi-user.target
+
+Reload the Systemctl Daemon:
+systemctl daemon-reload
+
+Start the Prometheus service:
+service prometheus start
+
+Check status of Prometheus:
+service prometheus status
+
+Stop the Prometheus service:
+service prometheus stop
+
+Now add the node-exporter detail in 
+prometheus.yml
+
+ - job_name: 'prometheus'
+    static_configs:
+    - targets: ['localhost:9090']
+  - job_name: 'node-exporter'
+    static_configs:
+    - targets: ['localhost:9100']
+
+you can start like this also
+./prometheus --config.file=./prometheus.yml
+
+============================
+Grafana
+
+Port=3000
+Grafana is a multi-platform open source analytics and interactive visualization web application. It provides charts, graphs, and alerts for the web when connected to supported data sources
+
+Grafana is an open source solution for running data analytics, pulling up metrics that make sense of the massive amount of data & to monitor our apps with the help of cool customizable dashboards.
+
+install grafana 
+wget https://dl.grafana.com/oss/release/grafana-8.0.6-1.x86_64.rpm
+sudo yum install grafana-8.0.6-1.x86_64.rpm -y
+
+To start the service and verify that the service has started:
+sudo systemctl daemon-reload
+sudo systemctl start grafana-server
+sudo systemctl status grafana-server
+
+Configure the Grafana server to start at boot:
+sudo systemctl enable grafana-server
+
+now check with IP port 3000 admin/admin change password
+
+Stop status of grafana server
+service grafana-server stop
+
+In the UI -->Select the data source -->add promethus -->provide the URL 
+http://localhost:9090  --save and test
+
+now go to dashboard add empty panel 
+like cpu related and memory related 
+
+=========================
+Alert Manger 
+Port 9093
+
+The Alertmanager handles alerts sent by client applications such as the Prometheus server. It takes care of deduplicating, grouping, and routing them to the correct receiver integration such as email.
+
+Download alertmanager using below link
+cd /opt
+wget https://github.com/prometheus/alertmanager/releases/download/v0.21.0/alertmanager-0.21.0.linux-amd64.tar.gz
+
+Extract tar file
+tar xvzf alertmanager-0.21.0.linux-amd64.tar.gz
+
+Rename file name
+mv alertmanager-0.21.0.linux-amd64/ alertmanager-0.21.0
+
+Create a file "/etc/systemd/system/alertmanager.service":
+
+[Unit]
+Description=alertmanager
+After=network-online.target
+
+[Service]
+User=root
+Restart=on-failure
+
+#Change this line if you download the alertmanager on different path user
+ExecStart=/opt/alertmanager/alertmanager \
+  --config.file=/opt/alertmanager/alertmanager.yml \
+
+[Install]
+WantedBy=multi-user.target
+
+Reload the Systemctl Daemon:
+systemctl daemon-reload
+
+now update the alertmanager.yml with values
+
+global:
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname']
+  receiver: gmail-notifications
+  group_interval: 30s
+  repeat_interval: 30s
+receivers:
+  - name: 'gmail-notifications'
+    email_configs:
+    - to: bcreddy.tr1@gmail.com
+      from: bcreddy.tr@gmail.com
+      smarthost: smtp.gmail.com:587
+      auth_username: "bcreddy.tr@gmail.com"
+      auth_identity: "bcreddy.tr@gmail.com"
+      auth_password: "password"
+      send_resolved: true
+	  
+
+Start the alertmanager service:
+service alertmanager start
+
+Check status of alertmanager:
+service alertmanager status
+
+Stop the alertmanager service:
+service alertmanager stop
+
+http://3.109.58.192:9093/#/alerts
+
+
+now go to prometheus check any alerts or there
+we need tp provide the conditions 
+now you can update the prometheus.yml file with alert manger details 
+
+alerting:
+  alertmanagers:
+  - static_configs:
+    - targets: ['localhost:9093']
+
+rule_files:
+  - "rules.yml"
+  # - "second_rules.yml"
+  
+  
+now create a file with name rules.yml with some condition when this alert is going to hit
+
+same prometheus floder create a file vi rules.yml
+
+groups:
+- name: example
+  rules:
+  # Alert for any cluster that has average CPU idle < 50%
+  - alert: HighUsage
+    expr: avg(irate(node_cpu_seconds_total{mode="idle"}[1m]) * 100) < 20
+    for: 1m
+    annotations:
+      summary: "High usage on {{ $labels.instance }}"
+	  
+	  
+when ever cpu utilization more than 20 % send a alert with in 1min
+
+now stop and start the prometheus
+
+now check alert in promethus its should be inactive 
+
+now increase the cpu utilization same server
+for i in 1 2 3 4; do while : ; do : ; done & done
+
+now check cpu utilization using top command
+
+wait for 1min you will get alert in prometheus alert  and its firing  
+
+now you will get a mail 
+
+
+https://prometheus.io/docs/guides/node-exporter/
+Metric	Meaning
+rate(node_cpu_seconds_total{mode="system"}[1m])	The average amount of CPU time spent in system mode, per second, over the last minute (in seconds)
+node_filesystem_avail_bytes	The filesystem space available to non-root users (in bytes)
+rate(node_network_receive_bytes_total[1m])	The average network traffic received, per second, over the last minute (in bytes)
+
+https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/
+
+	  
