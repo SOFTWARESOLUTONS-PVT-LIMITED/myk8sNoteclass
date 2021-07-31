@@ -1,0 +1,144 @@
+ELK
+=====
+https://phoenixnap.com/kb/install-elk-stack-centos-8
+https://phoenixnap.com/kb/elk-stack-tutorial
+The ELK stack is a group of open-source software packages used to manage logs. It’s typically used for server logs but is also flexible (elastic) for any project that generates large sets of data.
+
+
+java is required
+sudo yum install java-1.8.0-openjdk -y
+
+sudo rpm ––import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+vi /etc/yum.repos.d/elasticsearch.repo
+
+[elasticstack]
+name=Elastic repository for 7.x packages
+baseurl=https://artifacts.elastic.co/packages/7.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=1
+autorefresh=1
+type=rpm-md
+
+
+yum update -y
+
+yum install elasticsearch -y
+
+Open "elasticsearch.yml" and edit below details
+
+vi /etc/elasticsearch/elasticsearch.yml
+--------------------------------------------------
+  network.host: 0.0.0.0
+  http.port: 9200
+  discovery.type: single-node
+--------------------------------------------------
+
+sudo systemctl start elasticsearch
+
+sudo systemctl enable elasticsearch
+
+
+Start the service
+service elasticsearch start
+
+Check status of Elastic Search
+service elasticsearch status
+
+
+http://65.2.57.246:9200/
+
+install the logstash 
+PORT 9600
+
+rpm --import https://artifacts.elastic.co/GPG-KEY-elasticsearch
+
+vi /etc/yum.repos.d/logstash.repo
+----------------------------------------------------------------
+[logstash-7.x]
+name=Elastic repository for 7.x packages
+baseurl=https://artifacts.elastic.co/packages/7.x/yum
+gpgcheck=1
+gpgkey=https://artifacts.elastic.co/GPG-KEY-elasticsearch
+enabled=1
+autorefresh=1
+type=rpm-md
+
+Start Logstash
+Start and enable the Logstash service:
+
+yum install logstash -y
+service logstash start
+
+sudo systemctl start logstash
+sudo systemctl enable logstash
+
+yum install git -y
+git clone https://github.com/chinnareddaiah/elasticsearch-logstash-kibana.git
+yum install mvn 
+
+cd /root/elasticsearch-logstash-kibana/springboot-elk
+mvn clean install
+
+Check logs of Springboot-Application
+
+cd springboot-elk
+Run application for logs:
+
+mvn spring-boot:run
+Check log file in /root/logback
+
+now you can check logback.conf under workspace 
+you need to run that logback config 
+
+cd /usr/share/logstash/bin this is default directory
+now you can go to logback dir where is your code and run the command
+/usr/share/logstash/bin/logstash -f logback.conf  
+
+now you can check logstash ui it will get logback with date
+http://13.127.182.107:9200/_cat/indices
+
+
+Install Kibana
+PORT 5601
+
+yum install kibana -y
+
+/etc/kibana
+vi /etc/kibana/kibana.yml
+--------------------------------------------------
+  server.port: 5601
+  server.host: "0.0.0.0"
+  elasticsearch.hosts: ["http://localhost:9200"]
+--------------------------------------------------
+
+Start the service
+service kibana start
+
+Check status of Elastic Search
+service kibana status
+
+sudo systemctl start kibana
+sudo systemctl enable kibana
+
+http://13.127.182.107:5601/
+
+install filebeat
+================
+To simplify logging, install a lightweight module called Filebeat. Filebeat is a shipper for logs that centralizes data streaming.
+
+sudo yum install filebeat -y
+
+Next, add the system module, which will examine the local system logs:
+sudo filebeat modules enable system
+
+Next, run the Filebeat setup:
+sudo filebeat setup
+
+The system will do some work, scanning your system and connecting to your Kibana dashboard.
+Start the Filebeat service:
+sudo service filebeat start
+
+
+http://localhost:5601
